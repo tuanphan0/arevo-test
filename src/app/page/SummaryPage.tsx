@@ -1,96 +1,94 @@
-import { Card, Col, DatePicker, Divider, Form, Input, Row, Select, Skeleton, Space, Spin, Table, Tag, Tooltip } from 'antd';
+import { Card, Col, DatePicker, Divider, Form, Row, Select, Space, Spin, Tag, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
-import { useAppSelector, useAppDispatch } from '../../app/hooks';
-import { getDayOneAsync, summaryList, summaryLoading } from './summarySlice';
+import { useAppSelector, useAppDispatch } from '../hooks';
+import { getCasesForCountryByDateAsyncAsync, summaryList, summaryLoading } from '../../features/summary/summarySlice';
 import { Moment } from 'moment';
-import { countriesList, countriesLoading, getAllCountriesAsync } from '../countries/countriesSlice';
+import { countriesList, countriesLoading, getAllCountriesAsync } from '../../features/countries/countriesSlice';
 import { CountryDto } from '../../service/dto/countryDto';
-import { DayoneDto } from '../../service/dto/dayoneDto';
-import './Summary.less';
+import { CaseInfoDto } from '../../service/dto/dayoneDto';
+import './SummaryPage.less';
+import moment from 'moment';
 
 const { Option } = Select;
 const DateFormat = "MM/DD/YYYY";
-const colors=()=>{
-    const colorTags = ["magenta", "red", "volcano", "green", "cyan", "blue", "geekblue","purple","orange"];
+const colors = () => {
+    const colorTags = ["magenta", "red", "volcano", "green", "cyan", "blue", "geekblue", "purple", "orange"];
     let random = Math.floor(Math.random() * colorTags.length);
     return colorTags[random];
 }
-const Summary = () => {
+const SummaryPage = () => {
     const dispatch = useAppDispatch();
     const countries = useAppSelector(countriesList);
     const summarys = useAppSelector(summaryList);
     const countryLoad = useAppSelector(countriesLoading);
     const summaryLoad = useAppSelector(summaryLoading);
+
+    const [data, setdata] = useState<CaseInfoDto | null>(null);
     useEffect(() => {
         dispatch(getAllCountriesAsync());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    const [startDate, setStartDate] = useState<Date | null>(null);
-    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [fromDate, setFromDate] = useState<Date | null>(null);
+    const [toDate, setToDate] = useState<Date | null>(null);
     const [searchCountry, setSearchCountry] = useState<string>("");
     useEffect(() => {
-        if (searchCountry !== "") {
-            dispatch(getDayOneAsync(searchCountry));
+        if (searchCountry) {
+            dispatch(getCasesForCountryByDateAsyncAsync({ country: searchCountry, from: fromDate, to: toDate }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchCountry]);
-    const dateFilters = summarys.filter((countryitem: DayoneDto) => {
-        return !searchCountry ? true : countryitem.Country?.toLowerCase().includes(searchCountry?.toLowerCase())
-            &&
-            (startDate == null ? true : new Date(countryitem.Date) >= startDate)
-            &&
-            (endDate == null ? true : new Date(countryitem.Date) <= endDate);
-    }
-    );
-    const handleTotal = (value: string) => {
-        switch (value) {
-            case "Confirmed":
-                {
-                    if (startDate == null && endDate === null) {
-                        return summarys?.filter((x: DayoneDto) => x.Confirmed).length;
-                    }
-                    else {
-                        return dateFilters?.filter((x: DayoneDto) => x.Confirmed).length;
-                    }
-                } break;
-            case "Deaths":
 
-                {
-                    if (startDate == null && endDate === null) {
-                        return summarys?.filter((x: DayoneDto) => x.Deaths).length;
-                    }
-                    else {
-                        return dateFilters?.filter((x: DayoneDto) => x.Deaths).length;
-                    }
-                } break;
-            case "Recovered":
 
-                {
-                    if (startDate == null && endDate === null) {
-                        return summarys?.filter((x: DayoneDto) => x.Recovered).length;
-                    }
-                    else {
-                        return dateFilters?.filter((x: DayoneDto) => x.Recovered).length;
-                    }
-                } break;
-
-            default:
-                break;
+    useEffect(() => {
+        debugger
+        const from = fromDate ? new Date(fromDate.getTime()) : null;
+        if (fromDate && toDate && fromDate.getTime() === toDate.getTime()) {
+            from?.setDate(from.getDate() + -1);
         }
-    }
+        const dateFilters = summarys.filter((countryitem: CaseInfoDto) => {
+            return (from == null ? true : new Date(countryitem.Date) >= from)
+                &&
+                (toDate == null ? true : new Date(countryitem.Date) <= toDate);
+        }
+        );
+        if (!dateFilters || dateFilters.length === 0) {
+            setdata(null);
+            return
+        }
+        if (dateFilters.length === 1) {
+            const first = dateFilters[0];
+            setdata(first);
+        } else {
+            const first = dateFilters[0];
+            const last = dateFilters[dateFilters.length - 1];
+            const newValue: CaseInfoDto = {
+                ...first,
+                Confirmed: last.Confirmed - first.Confirmed,
+                Deaths: last.Deaths - first.Deaths,
+                Recovered: last.Recovered - first.Recovered,
+            }
+            setdata(newValue);
+        }
+
+    }, [summarys, fromDate, toDate])
+
     const handleChangeDateStart = (value: Moment | null) => {
-        setStartDate(value!?.toDate());
+        const date = value!?.toDate()
+        date?.setHours(7, 0, 0, 0)
+        setFromDate(date);
     }
     const handleChangeDateEnd = (value: Moment | null) => {
-        setEndDate(value!?.toDate());
+        const date = value!?.toDate()
+        date?.setHours(7, 0, 0, 0)
+        setToDate(date);
     }
     const handleChangeSelect = (value: string) => {
         setSearchCountry(value);
     }
     return (
         <>
-            {countryLoad &&
-                <>
+            {!countryLoad ?
+                (<>
                     <Row>
                         <Col span={24} style={{ textAlign: 'center' }}
                         >
@@ -109,13 +107,7 @@ const Summary = () => {
                                     option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
                                 }
                             >
-                                {countries.map((item: CountryDto) => {
-                                    return (
-                                        <>
-                                            <Option key={item.Country} value={item.Country}>{item.Country}</Option>
-                                        </>
-                                    );
-                                })}
+                                {countries.map((item: CountryDto) => <Option key={item.Country} value={item.Slug}>{item.Country}</Option>)}
                             </Select>
                         </Col>
                     </Row>
@@ -157,31 +149,29 @@ const Summary = () => {
                             xxl={{ span: 24, offset: 0 }}
                         >
                             <Card>
-                                {summaryLoad &&
-                                    <>
-                                        <h1>Total confirmed: <Tag style={{fontSize:'20px'}} color={colors()}>{handleTotal("Confirmed")}</Tag></h1>
-                                        <h1>Total Deaths: <Tag style={{fontSize:'20px'}} color={colors()}>{handleTotal("Deaths")}</Tag></h1>
-                                        <h1>Total Recovered: <Tag style={{fontSize:'20px'}} color={colors()}>{handleTotal("Recovered")}</Tag></h1>
-                                    </>
-                                } {!summaryLoad &&
-                                    <>
-                                        <Skeleton />
-                                    </>
+                                {summaryLoad ? (<div className="example">
+                                    <Spin />
+                                </div>) :
+                                    data && (<>
+                                        <h1>Total confirmed: <Tag style={{ fontSize: '20px' }} color={colors()}>{data?.Confirmed}</Tag></h1>
+                                        <h1>Total Deaths: <Tag style={{ fontSize: '20px' }} color={colors()}>{data?.Deaths}</Tag></h1>
+                                        <h1>Total Recovered: <Tag style={{ fontSize: '20px' }} color={colors()}>{data?.Recovered}</Tag></h1>
+                                    </>)
                                 }
                             </Card>
                         </Col>
 
                     </Row>
-                </>
+                </>) : <div className="example">
+                    <Spin />
+                </div>
             }
-            {!countryLoad &&
-                <>
-                    <div className="example">
-                        <Spin />
-                    </div>
-                </>
-            }
+            {/* {!countryLoad &&
+                <div className="example">
+                    <Spin />
+                </div>
+            } */}
         </>
     );
 }
-export default Summary;
+export default SummaryPage;

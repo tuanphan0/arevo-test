@@ -1,4 +1,5 @@
 export interface CountryDto {
-    Country: string;
-    ISO2: string
-  }
+  Country: string;
+  ISO2: string;
+  Slug: string;
+}

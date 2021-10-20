@@ -1,24 +1,26 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { error } from "console";
-import { RootState, AppThunk } from "../../app/store";
-import { DayoneDto } from "../../service/dto/dayoneDto";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { RootState } from "../../app/store";
+import { CaseRequest, CaseInfoDto } from "../../service/dto/dayoneDto";
 import summaryService from "../../service/summaryService";
-export interface IProps {
-  list: DayoneDto[];
+export interface IState {
+  list: CaseInfoDto[];
   loading: boolean;
   error: string;
 }
 
-const initialState: IProps = {
-  list:[],
+const initialState: IState = {
+  list: [],
   loading: false,
   error: "",
 };
 
-export const getDayOneAsync = createAsyncThunk("api/summary", async (country: string) => {
-  const response = await summaryService.DayOneGetCountry(country);
-  return response;
-});
+export const getCasesForCountryByDateAsyncAsync = createAsyncThunk(
+  "api/summary",
+  async (request: CaseRequest) => {
+    const response = await summaryService.getCasesForCountryByDate(request);
+    return response;
+  }
+);
 
 export const summarySlice = createSlice({
   name: "summary",
@@ -26,17 +28,20 @@ export const summarySlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(getDayOneAsync.pending, (state) => {
+      .addCase(getCasesForCountryByDateAsyncAsync.pending, (state) => {
         state.loading = true;
       })
-      .addCase(getDayOneAsync.rejected, (state, action) => {
+      .addCase(getCasesForCountryByDateAsyncAsync.rejected, (state, action) => {
         state.error = action.error.message as string;
         state.loading = false;
       })
-      .addCase(getDayOneAsync.fulfilled, (state, action) => {
-        state.loading = true;
-        state.list = action.payload;
-      });
+      .addCase(
+        getCasesForCountryByDateAsyncAsync.fulfilled,
+        (state, action) => {
+          state.list = action.payload;
+          state.loading = false;
+        }
+      );
   },
 });
 export const summaryList = (state: RootState) => state.summary.list;

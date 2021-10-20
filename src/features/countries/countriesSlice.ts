@@ -16,10 +16,13 @@ const initialState: IProps = {
   error: "",
 };
 
-export const getAllCountriesAsync = createAsyncThunk("api/countries", async () => {
-  const response = await countriesService.GetAll();
-  return response;
-});
+export const getAllCountriesAsync = createAsyncThunk(
+  "api/countries",
+  async () => {
+    const response = await countriesService.GetAll();
+    return response;
+  }
+);
 
 export const countriesSlice = createSlice({
   name: "countries",
@@ -35,7 +38,7 @@ export const countriesSlice = createSlice({
         state.loading = false;
       })
       .addCase(getAllCountriesAsync.fulfilled, (state, action) => {
-        state.loading = true;
+        state.loading = false;
         state.list = action.payload;
       });
   },
