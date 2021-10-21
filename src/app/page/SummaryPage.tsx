@@ -6,7 +6,7 @@ import { Moment } from 'moment';
 import { countriesList, countriesLoading, getAllCountriesAsync } from '../../features/countries/countriesSlice';
 import { CountryDto } from '../../service/dto/countryDto';
 import { CaseInfoDto } from '../../service/dto/dayoneDto';
-import './SummaryPage.less';
+import './SummaryPage.css';
 import moment from 'moment';
 
 const { Option } = Select;

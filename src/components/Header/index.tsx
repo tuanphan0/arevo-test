@@ -1,5 +1,5 @@
 import { Layout, Menu, Row } from "antd";
-import './index.less';
+import './index.css';
 const { Header } = Layout;
 const AppHeader = () => {
   return (
